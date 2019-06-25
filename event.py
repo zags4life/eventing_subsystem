@@ -3,25 +3,9 @@
 import inspect
 from threading import Lock
 
-from .invalideventsignature import *
-
-class MyLock(object):
-    def __init__(self, thread_safe=True):
-        self.lock = Lock()
-        self.thread_safe = thread_safe
-
-    def __enter__(self):
-        if self.thread_safe:
-            self.lock.acquire()
-        return self
-
-    def __exit__(self, *args):
-        if self.thread_safe:
-            self.lock.release()
-        return
+from .eventerrors import *
 
 class _Event(object):
-    
     def __init__(self, owner, *signature):
         # It is possible that the caller will pass the signature as a tuple rather than a param list.
         # To acount for this
@@ -55,16 +39,11 @@ class _Event(object):
         assert self.__owner, 'event owner cannot be None'
 
     def __call__(self, *args):
-        '''Calling the event will signal all registered callbacks.
-
-        Example:
-            def callback(event_name, payload):
-                print(event_name, payload)
-
-            my_event = Event(str, str)
-            my_event.non_callable() += callback
-
-            my_event(event_name='test callback', payload='this is my payload')
+        '''Call operator used to invoke, or raise, the event.  Raising the
+        event will invoke all registered callbacks.
+        
+        NB: events can only be raised by the owning object.  I.e. this object
+            is not callable outside of the owning object
         '''
 
         caller = inspect.currentframe().f_back.f_locals.get('self')
@@ -97,6 +76,9 @@ class _Event(object):
             callback(self.__owner, *args)
 
     def __iadd__(self, callback):
+        '''The add and assign (+=) operator used for adding callbacks 
+        to the event.
+        '''
         if not (callback and callable(callback)):
             raise InvalidEventCallback('Event callback must be callable')
 
@@ -126,6 +108,8 @@ class _Event(object):
         return self
 
     def __isub__(self, callback):
+        '''The -= operator of removing callbacks from the event
+        '''
         with self.__lock:
             try:
                 self.__callbacks.remove(callback)

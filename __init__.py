@@ -37,11 +37,16 @@ Example:
 '''
 
 from .event import Event
-from .eventproducermeta import *
+from .eventerrors import EventError
+from .eventproducermeta import (
+    event,
+    AbstractEventProducerMeta,
+    EventProducerMeta,
+    EventProducer,
+)
 
-def event(name, signature=None):
-    def wrapper(func):
-        func.__events__ = getattr(func, '__events__', [])
-        func.__events__.append((name, signature))
-        return func
-    return wrapper
+__all__ = ['event', 'Event', 
+    'EventProducer', 
+    'EventProducerMeta', 
+    'AbstractEventProducerMeta',
+    'EventError']
