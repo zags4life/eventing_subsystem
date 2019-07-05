@@ -7,39 +7,40 @@ the event, invoking each callback method registered with the Event.
 This class is thread safe.
 
 Example:
-    class Producer(object):
-        @event(name='on_work_complete', signature=str)
-        def do_work_then_raise_event(self):
-            external_param = 'foo'
+from eventing_subsystem import event, EventProducer
 
-            self.work_complete_event(external_param)
+class Producer(EventProducer):
+    @event(name='on_work_complete', signature=str)
+    def do_work_then_raise_event(self):
+        external_param = 'foo'
 
-    class Consumer(object):
-        def __init__(self):
-            self.producer = Producer()
+        self.on_work_complete(external_param)
 
-            # Register event callback
-            self.producer.on_work_complete += self.on_work_complete
+class Consumer(object):
+    def __init__(self):
+        self.producer = Producer()
 
-        def do_work(self):
-            self.producer.do_work_then_raise_event()
+        # Register event callback
+        self.producer.on_work_complete += self.on_work_complete
 
-        def on_work_complete(self, owner, event_param):
-            print('Producer raised event {}'.format(event_param))
+    def do_work(self):
+        self.producer.do_work_then_raise_event()
 
-            # Unregister the event (this is optional)
-            self.producer.on_work_complete_event -= self.on_work_complete
+    def on_work_complete(self, owner, event_param):
+        print('Producer raised event {}'.format(event_param))
 
-    if __name__ == '__main__':
-        consumer = Consumer()
+        # Unregister the event (this is optional)
+        self.producer.on_work_complete -= self.on_work_complete
 
-        consumer.do_work()
+if __name__ == '__main__':
+    consumer = Consumer()
+
+    consumer.do_work()
 '''
 
-from .event import Event
+from .event import event, Event
 from .eventerrors import EventError
 from .eventproducermeta import (
-    event,
     AbstractEventProducerMeta,
     EventProducerMeta,
     EventProducer,
