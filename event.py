@@ -132,3 +132,46 @@ class Event(object):
         if instance not in self.__lookup:
             self.__lookup[instance] = _Event(instance, *self.__types)
         return self.__lookup[instance]
+
+def event(name, signature=None):
+    '''event decorator used to define events in a class.
+
+    This decorator requires consuming classes to dervice from EventProducer
+    or use the metaclass EventProducerMeta
+        
+    Parameters:
+        name - a string representing the name of the event
+        signature - a tuple of types defining event signature.
+
+    Note: 
+    The first parameter for every event callback is the sender object,
+    which is not required to be defined in the signature. Furthermore, it is
+    perfectly valid to define the signature as a single type, as None, or 
+    omitted altogether.
+    
+    Example:
+        class Producer(EventProducer):
+            @event(name='on_update_event', signature=str)
+            def do_work(self):
+                self.on_update_event('complete')
+
+        def on_update_callback(caller, msg):
+            print(msg)
+
+        producer = Producer()
+        producer.on_update_event += on_update_callback
+
+        producer.do_work()
+
+
+    '''
+    def wrapper(func):
+        # Get the functions events list, or create one if one does not exist.
+        func.__events__ = getattr(func, '__events__', [])
+
+        # Append the event name and signature to the functions
+        # events list.
+        func.__events__.append((name, signature))
+
+        return func
+    return wrapper
