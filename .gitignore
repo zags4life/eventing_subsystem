@@ -1,0 +1,4 @@
+# ingore __pycache__
+*.pc
+*.pyc
+__pycache__/
