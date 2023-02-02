@@ -1,6 +1,15 @@
 Eventing Subsystem
 ===
 
+- [Introduction]
+- [Enabling eventing for a python class]
+- [Raising events]
+- [Consuming events]
+- [Errors]
+- [Performance]
+- [Examples]
+- [Troubleshooting]
+
 ## Introduction
 The _eventing_ _subsystem_ enables .NET like eventing from a python class.  I.e. a producer / consumer model, where consumers can register callback methods with the producer in which the producer will signal, or raise the event, invoking each registered callback method.  This eventing system is thread safe.
 
@@ -15,6 +24,8 @@ The most common method for defining / enabling events in a python object is usin
 
 Defining events via the `event` decorator requires that the class derive from `EventProducer`.
 
+You can either derive your object from `EventProducer`, like so:
+
 ```
 class Producer(EventProducer):
     @event(name='on_work_complete', signature=str)
@@ -23,6 +34,26 @@ class Producer(EventProducer):
 
         self.on_work_complete(external_param)
 ```
+
+Or use the `event_producer` decorator, like so:
+
+```
+@event_producer`
+class Producer:
+    @event('on_work_complete', str)
+    def do_work_then_raise_event(self):
+        external_param = 'foo'
+
+        self.on_work_complete(external_param)
+
+```
+
+### EventProducer
+The `EventProducer` base class is a metaclass, which derives from `ABCMeta`.  Any object wishing to use the `@event` decorator must either:
+A. Derive their class from `EventProducer`, or
+B. use the `event_producer` class decorator.
+
+If you wish to not derive from `EventProducer`, you can define the `Event` as a class descriptor (see [advanced]).
 
 ### Decorator signature
 The `event` decorator requires two parameters: `name` and `signature`.  The `name` parameter defines the name of the event and the `signature` defines the event signature as a tuple of types (where ordering of types in the event signature is of importance).
@@ -36,8 +67,8 @@ For example, an event defined as `@event(name='on_event', signature=str)` would 
 ### Advanced
 A more advanced way to define / enable events in a python class, is as a class descriptor.  Defining events in this manner does _not_ require the class to be derived from `EventProducer`.  See [examples](#defining-an-event-using-a-class-descriptor) for more information.
 
-## Raising an event
-To raise an event, the object owning the event can simply call the event, passing all required parameters to the event.  To reiterate, the object raising the event should not pass `self` as a parameter, since the _event_subsystem_ will take case of this automatically.  
+## Raising events
+To raise an event, the object owning the event can simply call the event, passing all required parameters to the event.  To reiterate, the object raising the event should **not** pass `self` as a parameter, since the _event_subsystem_ will take case of this automatically.  
 
 It is important to note that while an event is exposed publicly to consumers, it can only be invoked by the object who initially created it (i.e. the owner).  __Attempting to raise an event outside the owning object will result in an `EventInvocationError`.__
 
@@ -79,14 +110,14 @@ In the above example, the consumer is registering the same callback with N numbe
 In some cases the _eventing_subsystem_ will detected an invalid state.  In these cases, it will raise the appropriate exception.  Below are the exceptions that can be raised by the _eventing_subsystem_ and the reasons they would be raised.
 
 + `InvalidEventSignature` - Raised when an event is raised with set of paramters that does not match the defined event signature.
-+ `InvalidEventCallback` - Raised when an event callback defines a different set of parameters than what is defining in the event signature.  
++ `EventRegistrationError` - Raised when an event callback defines a different set of parameters than what is defined in the event signature.  
 + `EventInvocationError` - Raised when a consumer attempts to raise (call) an event outside of the owning object.
 + `EventError` - The base class for all events raised by the _eventing_subsystem_.  This is helpful if you wish to catch all errors raised by the _eventing_subsystem_.
 
 ## Performance
 Type checking of callback and invocation signatures have a performance impact.  When running in a production environment, it is strongly recommended that this module be run in optimized mode (i.e. `python -O`).
 
-## Example
+## Examples
 ### Defining an event using a decorator
 ```
 from eventing_subsystem import event, EventProducer

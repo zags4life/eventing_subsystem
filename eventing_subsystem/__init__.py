@@ -38,6 +38,9 @@ if __name__ == '__main__':
     consumer.do_work()
 '''
 
+import logging
+LOGGER = logging.getLogger(__name__)
+
 from .event import event, Event
 from .eventerrors import EventError
 from .eventproducermeta import (
