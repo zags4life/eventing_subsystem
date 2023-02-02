@@ -6,7 +6,7 @@ class EventError(Exception):
 class InvalidEventSignature(EventError):
     pass
 
-class InvalidEventCallback(EventError):
+class EventRegistrationError(EventError):
     pass
     
 class EventInvocationError(EventError):
