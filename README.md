@@ -1,28 +1,28 @@
 Eventing Subsystem
 ===
 
-- [Introduction]
-- [Enabling eventing for a python class]
-- [Raising events]
-- [Consuming events]
-- [Errors]
-- [Performance]
-- [Examples]
-- [Troubleshooting]
+- [Introduction](#introduction)
+- [Enabling eventing for a python class](#enabling-eventing-for-a-python-class)
+- [Raising events](#raising-events)
+- [Consuming events](#consuming-events)
+- [Errors](#errors)
+- [Performance](#performance)
+- [Examples](#examples)
+- [Troubleshooting](#troubleshooting)
 
 ## Introduction
-The _eventing_ _subsystem_ enables .NET like eventing from a python class.  I.e. a producer / consumer model, where consumers can register callback methods with the producer in which the producer will signal, or raise the event, invoking each registered callback method.  This eventing system is thread safe.
+The _eventing_ _subsystem_ enables .NET like events in a python class.  I.e. a producer / consumer model, where consumers can register callback methods with the producer in which the producer will signal, or raise the event, invoking each registered callback method.  This eventing system is thread safe.
 
 ### Basic Idioms
 1. Events are exposed publicly to consumers for the purpose of subscribing / unsubscribing
-2. Events can only be raised by object owning the event
+2. Events can _only_ be raised by object owning the event.
 3. Events need to be easily discoverable by consumers
 4. Events _must_ be thread safe
 
 ## Enabling eventing for a python class
-The most common method for defining / enabling events in a python object is using the `event` method decorator
+The most common method for defining / enabling events in a python object is using the `event` function decorator.
 
-Defining events via the `event` decorator requires that the class derive from `EventProducer`.
+Defining events via the `event` decorator requires that the class derive from [`EventProducer`](#eventproducer).
 
 You can either derive your object from `EventProducer`, like so:
 
@@ -38,7 +38,7 @@ class Producer(EventProducer):
 Or use the `event_producer` decorator, like so:
 
 ```
-@event_producer`
+@event_producer
 class Producer:
     @event('on_work_complete', str)
     def do_work_then_raise_event(self):
@@ -50,30 +50,30 @@ class Producer:
 
 ### EventProducer
 The `EventProducer` base class is a metaclass, which derives from `ABCMeta`.  Any object wishing to use the `@event` decorator must either:
-A. Derive their class from `EventProducer`, or
-B. use the `event_producer` class decorator.
+1. Derive their class from `EventProducer`, or
+2. use the `@event_producer` class decorator
 
-If you wish to not derive from `EventProducer`, you can define the `Event` as a class descriptor (see [advanced]).
+If you wish to not derive from `EventProducer`, you can [define the `Event` as a class descriptor](#advanced).
 
 ### Decorator signature
-The `event` decorator requires two parameters: `name` and `signature`.  The `name` parameter defines the name of the event and the `signature` defines the event signature as a tuple of types (where ordering of types in the event signature is of importance).
+The `event` decorator requires two parameters: `name` and `signature`, where `name` defines the name of the event and `signature` defines the event signature as a tuple of types.
 
-The event `signature` is a tuple of types defining the event signature and parameter ordering.  It is perfectly valid to define the signature as None or be omitted altogether.  It is also valid to define the `signature` as a single type.  The `signature` is used by the event to valid both callback methods and event invocation calls for proper method signatures.
+The event `signature` tuple defines the event signature and parameter ordering.  It is perfectly valid to define the signature as None or be omitted altogether.  It is also valid to define the `signature` as a single type.  The `signature` is used to validate both callback methods and event invocations have the proper method signature.
 
-When raising an event, **the _eventing_subsystem_ will automatically pass the _sender_ (the object raising the event) as the first parameter to all registered callbacks.  When raising an event, it is not required to pass `self` as a parameter, nor define `self` in the event signature.**
+When raising an event, **the _eventing_subsystem_ will automatically pass `sender` (the object raising the event) as the first parameter to all registered callbacks.**  This is to enable consumers to register a single callback with multiple producers, while being able to identify which producer raised the event.  **When raising an event, it is not required to pass `sender` as a parameter, nor define `sender` in the event signature.**
 
-For example, an event defined as `@event(name='on_event', signature=str)` would in turn require a callback signature of `def on_event_callback(sender, payload):`.  Furthermore, when raising the event, only `payload` would need to be passed as a parameter to the event object, when called.  E.g. `self.on_event('my payload')`.
+For example, an event defined as `@event(name='on_event', signature=str)` would require a callback signature of `def on_event_callback(sender, payload):`.  Furthermore, when raising the event, only `payload` would need to be passed as a parameter to the event object, when called.  E.g. `self.on_event('my payload')`.
 
 ### Advanced
 A more advanced way to define / enable events in a python class, is as a class descriptor.  Defining events in this manner does _not_ require the class to be derived from `EventProducer`.  See [examples](#defining-an-event-using-a-class-descriptor) for more information.
 
 ## Raising events
-To raise an event, the object owning the event can simply call the event, passing all required parameters to the event.  To reiterate, the object raising the event should **not** pass `self` as a parameter, since the _event_subsystem_ will take case of this automatically.  
+To raise an event, the object owning the event simply calls the event, like a normal function, passing all required parameters to the event.  Again, the object raising the event (i.e. the producer) should **not** pass `sender` as a parameter when invoking the event; _event_subsystem_ will take case of this automatically.  
 
 It is important to note that while an event is exposed publicly to consumers, it can only be invoked by the object who initially created it (i.e. the owner).  __Attempting to raise an event outside the owning object will result in an `EventInvocationError`.__
 
 ## Consuming events
-Consumers can subscribe, and unsubscribe, to events using the `+=` and `-=` operators exposed by the event.  The right hand side of the operator is expected to be the event callback method, or callable object.
+Consumers can subscribe and unsubscribe to events using the `+=` and `-=` operators, respectively.  The right hand side of the operator is expected to be the event callback method, or callable object.
 
 For example:
 ```
@@ -84,10 +84,8 @@ producer = Producer()
 producer.on_event += my_callback
 ```
 
-When an event is raised, **the _eventing_subsystem_ will automatically pass the _sender_ (the object raising the event) as the first parameter to all registered callbacks, plus any additional parameters defined in the event signature.**  For example, an event defined as `@event(name='on_event', signature=str)` would in turn require a callback signature of `def on_event_callback(sender, payload):`.  When looking to subscribe to an event, please make note of this behavior to avoid an `InvalidEventCallback` exception (or a `TypeError` exception when running in optimized mode).
-
 ### Sender
-When an event is raise, and the callbacks invoked, the _event_subsystem_ will pass the sender object as the first parameter followed by any subsequent parameters passed to the event at the point of invocation.  Passing of the sender object is required to help consumers identify which instance of a producter object raised the event.
+When an event is raised, **the _eventing_subsystem_ will automatically pass the _sender_ (the object raising the event) as the first parameter to all registered callbacks, plus any additional parameters defined in the event signature.**  For example, an event defined as `@event(name='on_event', signature=str)` would in turn require a callback signature of `def on_event_callback(sender, payload):`.  When looking to subscribe to an event, please make note of this behavior to avoid an `InvalidEventCallback` exception (or a `TypeError` exception when running in optimized mode).
 
 For example:
 ```
@@ -103,8 +101,6 @@ for _ in range(10):
 ```
 
 In the above example, the consumer is registering the same callback with N number of producers.  Without the `sender` parameter, it would be impossible to identify which instance of `Producer` raised the event.
-
-**The _eventing_subsystem_ will automatically pass the `sender` (the object raising the event) as the first parameter to all registered callbacks.  When raising an event, it is not required to pass `self` as a parameter, nor define `self` in the event signature.**
 
 ## Errors
 In some cases the _eventing_subsystem_ will detected an invalid state.  In these cases, it will raise the appropriate exception.  Below are the exceptions that can be raised by the _eventing_subsystem_ and the reasons they would be raised.
@@ -156,12 +152,11 @@ Producer raised event foo
 ```
 
 ### Defining an event using a class descriptor
-Plese refer to the ["Defining an event using a decorator" example](#defining-an-event-using-a-decorator) above.  The `Consumer` code and `__main__` code remains the same.
+If the producer object does not derivce from [`EventProducer`](#eventproducer), the _eventing_ _subsystem_ can still be used.  The events need to be defined as class descriptors.  The `Consumer` code and `__main__` code remains the same as the  ["Defining an event using a decorator" example](#defining-an-event-using-a-decorator) above.
 ```
 class Producer(object):
     on_work_complete = Event(str)
-
-    # @event(name='on_work_complete', signature=str)
+    
     def do_work_then_raise_event(self):
         external_param = 'foo'
 
