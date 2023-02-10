@@ -117,7 +117,9 @@ class _Event:
 
                 raise EventRegistrationError(
                     'Invalild callback signature.  ' \
-                    f'Expected {len(self.__signature) + 1} parameters, but ' \
+                    f"Expected {len(self.__signature) + 1} " \
+                    f"parameter{'s' if len(self.__signature) > 0 else ''}" \
+                    f", but " \
                     f'{len(inspect.signature(callback).parameters)} were ' \
                     f'defined.  Note: the first parameter for any event ' \
                     f'callback is the owning object.' 

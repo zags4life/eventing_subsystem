@@ -77,7 +77,7 @@ class AbstractEventProducerMeta(ABCMeta, EventProducerMeta):
 
 class EventProducer(object, metaclass=AbstractEventProducerMeta):
     pass
-    
+
 
 def event_producer(cls):
     '''Class decorator that ensures the class is an EventProducer, which is
@@ -89,16 +89,16 @@ def event_producer(cls):
     # Iterate through the classes mro.  If any base classes are already
     # an EventProducer, return cls (i.e. do nothing).
     # NB: We could use 'any' rather than using a for loop, but we can achieve
-    # performance improvements if we early exit.    
+    # performance improvements if we early exit.
     for klass in mro:
         if type(klass) == type(EventProducer):
             return cls
-    
+
     # If we reach this point, the object is NOT an EventProducer.  Modify the
     # classes mro to include EventProducer
     new_class = type(
-        cls.__name__, 
-        tuple(mro[1:-1] + [EventProducer, mro[-1]]), 
+        cls.__name__,
+        tuple(mro[1:-1] + [EventProducer, mro[-1]]),
         dict(cls.__dict__)
     )
     return new_class
